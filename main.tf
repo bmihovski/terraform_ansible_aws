@@ -290,12 +290,14 @@ resource "aws_instance" "dev" {
   subnet_id = "${aws_subnet.public.id}"
   
   provisioner "local-exec" {
-    command = "cat <<EOF > aws_hosts
+    command = <<EOT
+cat <<EOF > aws_hosts
 [dev]
 ${aws_instance.dev.public_ip}
 [dev:vars]
 s3code=${aws_s3_bucket.code.bucket}
-EOF"
+EOF
+EOT
   }
   #ansible play  
   provisioner "local-exec" {
@@ -342,12 +344,14 @@ resource "aws_ami_from_instance" "golden" {
   name = "ami-${random_id.ami.b64}"
   source_instance_id = "${aws_instance.dev.id}"
   provisioner "local-exec" {
-    command = "cat <<EOF > userdata
+    command = <<EOT
+cat <<EOF > userdata
 #!/bin/bash
 /usr/bin/aws s3 sync s3://${aws_s3_bucket.code.bucket} /var/www/html/
 /bin/touch /va/spool/cron/root
 sudo /bin/echo '*/5 * * * * aws s3 sync s3://${aws_s3_bucket.code.bucket} /var/www/html/' >> /var/spool/cron/root
-EOF" 
+EOF
+EOT
   }
 }
 #launch
