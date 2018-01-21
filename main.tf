@@ -5,7 +5,46 @@ provider "aws" {
 
 #IAM
 #S3_access
+resource "aws_iam_instance_profile" "s3_access" {
+  name = "s3_access"
+  roles = ["${aws_iam_role.s3_access.name}"]
+}
 
+resource "aws_iam_role_policy" "s3_access_policy" {
+  name = "s3_access_policy"
+  role = "${aws_iam_role.s3_access.id}"
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "s3:*",
+      "Resource": "*"
+    }
+   ]
+}
+EOF
+}
+
+resource "aws_iam_role" "s3_access" {
+  name = "s3_access"
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": "sts:AssumeRole",
+      "Principal": {
+        "Service": "ec2.amazonaws.com"
+      },
+        "Effect": "Allow",
+        "Sid": ""
+    }
+    ]
+}
+EOF
+}
 #VPC
 resource "aws_vpc" "vpc" {
   cidr_block = "10.1.0.0/16"
@@ -66,6 +105,26 @@ resource "aws_subnet" "private2" {
     Name = "private2"
   }
 }
+#create S3 VPC endpoint
+resource "aws_vpc_endpoint" "private-s3" {
+  vpc_id = "${aws_vpc.vpc.id}"
+  service_name = "com.amazonaws.${var.aws_region}.s3"
+  route_table_ids = ["${aws_vpc.vpc.main_route_table_id}", "${aws_route_table.public.id}"]
+  policy = <<POLICY
+{
+  "Statement": [
+    {
+      "Action": "*",
+      "Effect": "Allow",
+      "Resource": "*",
+      "Principal": "*"
+    }
+  ]
+}
+POLICY
+}
+
+
 #RDS1
 resource "aws_subnet" "rds1" {
   vpc_id = "${aws_vpc.vpc.id}"
@@ -190,7 +249,16 @@ resource "aws_security_group" "RDS" {
     security_groups = ["${aws_security_group.public.id}", "${aws_security_group.private.id}"]
   } 
 }
-#RDS
+#S3 code bucket
+resource "aws_s3_bucket" "code" {
+  bucket = "${var.domain_name}_code43435"
+  acl = "private"
+  force_destroy = true
+  tags {
+    Name = "code bucket"
+  }
+}
+#compute
 resource "aws_db_instance" "db" {
   allocated_storage = 10
   engine = "mysql"
@@ -208,11 +276,6 @@ resource "aws_key_pair" "auth" {
   key_name = "${var.key_name}"
   public_key = "${file(var.public_key_path)}"
 }
-
-#S3 code bucket
-
-#compute
-#key pair
 #dev server
   #ansible play
 #load balancer
