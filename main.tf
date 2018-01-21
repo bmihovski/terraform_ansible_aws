@@ -203,6 +203,12 @@ resource "aws_db_instance" "db" {
   vpc_security_group_ids = ["${aws_security_group.RDS.id}"]
 }
 
+#key pair
+resource "aws_key_pair" "auth" {
+  key_name = "${var.key_name}"
+  public_key = "${file(var.public_key_path)}"
+}
+
 #S3 code bucket
 
 #compute
