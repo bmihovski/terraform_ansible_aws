@@ -1,0 +1,25 @@
+---
+- hosts: dev
+  become: true
+  remote_user: ec2-user
+  tasks:
+    - name: Install Apache
+      yum:
+        name: '{{ item }}'
+        state: present
+      with_items:
+        - httpd
+        - php
+        - php-mysql
+        
+    - name: Extract Wordpress
+      unarchive:
+        remote_src: true
+        src: 'http://wordpress.org/wordpress-latest.tar.gz'
+        dest: '/var/www/html/'
+        mode: 0755
+        owner: 'apache'
+        group: 'apache'
+        extra_opts:
+          - '--strip-components=1'
+...
